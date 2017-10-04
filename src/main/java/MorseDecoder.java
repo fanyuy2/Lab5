@@ -48,13 +48,18 @@ public class MorseDecoder {
         /*
          * We should check the results of getNumFrames to ensure that they are safe to cast to int.
          */
+        //totalBinCount is number of bins
+        //returnBuffer is number of channel * 100
         int totalBinCount = (int) Math.ceil(inputFile.getNumFrames() / BIN_SIZE);
         double[] returnBuffer = new double[totalBinCount];
-
         double[] sampleBuffer = new double[BIN_SIZE * inputFile.getNumChannels()];
         for (int binIndex = 0; binIndex < totalBinCount; binIndex++) {
             // Get the right number of samples from the inputFile
             // Sum all the samples together and store them in the returnBuffer
+            inputFile.readFrames(sampleBuffer, BIN_SIZE);
+            for (int i = 0; i < BIN_SIZE;i++) {
+                returnBuffer[binIndex] += sampleBuffer[i];
+            }
         }
         return returnBuffer;
     }
@@ -81,7 +86,28 @@ public class MorseDecoder {
          * There are four conditions to handle. Symbols should only be output when you see
          * transitions. You will also have to store how much power or silence you have seen.
          */
-
+        boolean ispower;
+        boolean waspower;
+        boolean issilence;
+        boolean wassilence;
+        String powerToDotDash = null;
+        for (int i = 0; i < powerMeasurements.length; i += DASH_BIN_COUNT) {
+            for (int j = i; j < DASH_BIN_COUNT; j++) {
+                ispower = powerMeasurements[j] > POWER_THRESHOLD;
+                waspower = powerMeasurements[j - 1] > POWER_THRESHOLD;
+                issilence = powerMeasurements[j] < POWER_THRESHOLD;
+                wassilence = powerMeasurements[j - 1] < POWER_THRESHOLD;
+                if (ispower && waspower) {
+                    powerToDotDash += "-";
+                } else if (ispower && !waspower) {
+                    powerToDotDash += ".";
+                } else if (issilence && wassilence) {
+                    powerToDotDash += " ";
+                } else if (issilence && !wassilence) {
+                    powerToDotDash += ".";
+                }
+            }
+        }
         // if ispower and waspower
         // else if ispower and not waspower
         // else if issilence and wassilence
